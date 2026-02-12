@@ -43,11 +43,16 @@ export default function EventPage() {
 
   const handleJoinEvent = async () => {
     if (!event) return;
+    
+    const email = prompt("Enter your email to join the event:");
+    if (!email) return;
+    
     setJoining(true);
     try {
       const res = await fetch(`/api/events/${event._id}/participate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
       if (res.ok) {
@@ -57,10 +62,11 @@ export default function EventPage() {
         const updatedEvent = await refreshRes.json();
         setEvent(updatedEvent);
       } else {
-        alert("Failed to join event");
+        const errorData = await res.json();
+        alert(`Failed to join event: ${errorData.message}`);
       }
     } catch (err) {
-      alert("Error joining event");
+      alert(`Error joining event: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setJoining(false);
     }
