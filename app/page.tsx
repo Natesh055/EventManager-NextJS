@@ -90,7 +90,7 @@ export default async function Home() {
                           </span>
                         </div>
                         <span className="text-indigo-600 font-medium group-hover:text-indigo-700 transition">
-                          View →
+                          {/* Vie w → */}
                         </span>
                       </div>
                     </div>
