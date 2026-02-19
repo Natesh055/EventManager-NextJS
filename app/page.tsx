@@ -1,16 +1,21 @@
 import Link from "next/link";
+import { connectDB } from "@/lib/mongodb";
+import Event from "@/models/Event";
 
+// ✅ Server-side data fetching (runs on Vercel server)
 async function getEvents() {
-  const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
-  const res = await fetch(NEXT_PUBLIC_BASE_URL + "/api/events", {
-    cache: "no-store",
-  });
+  await connectDB();
 
-  return res.json();
+  const events = await Event.find({})
+    .sort({ date: 1 })
+    .lean();
+
+  // convert Mongo documents → plain JSON
+  return JSON.parse(JSON.stringify(events));
 }
 
 export default async function Home() {
-  const { events } = await getEvents();
+  const events = await getEvents();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -20,8 +25,11 @@ export default async function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-bold text-gray-800">EventHub</h1>
-              <p className="text-gray-600 mt-2">Discover and create amazing events</p>
+              <p className="text-gray-600 mt-2">
+                Discover and create amazing events
+              </p>
             </div>
+
             <Link
               href="/create"
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
@@ -40,7 +48,9 @@ export default async function Home() {
               <h2 className="text-2xl font-bold text-gray-800">
                 Upcoming Events ({events.length})
               </h2>
-              <p className="text-gray-600 mt-2">Explore and join upcoming events</p>
+              <p className="text-gray-600 mt-2">
+                Explore and join upcoming events
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -78,20 +88,23 @@ export default async function Home() {
 
                         <div className="flex items-center text-gray-700">
                           <span className="text-lg mr-3">📍</span>
-                          <span className="font-medium">{event.location}</span>
+                          <span className="font-medium">
+                            {event.location}
+                          </span>
                         </div>
                       </div>
 
                       {/* Participants */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <span className="text-sm text-gray-600">👥 </span>
+                          <span className="text-sm text-gray-600">👥</span>
                           <span className="text-sm font-medium text-gray-700 ml-1">
                             {event.participants?.length || 0} Participants
                           </span>
                         </div>
+
                         <span className="text-indigo-600 font-medium group-hover:text-indigo-700 transition">
-                          {/* Vie w → */}
+                          View →
                         </span>
                       </div>
                     </div>
@@ -103,8 +116,13 @@ export default async function Home() {
         ) : (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">📭</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">No Events Yet</h3>
-            <p className="text-gray-600 mb-6">Be the first to create an event!</p>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+              No Events Yet
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Be the first to create an event!
+            </p>
+
             <Link
               href="/create"
               className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200"
