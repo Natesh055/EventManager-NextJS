@@ -1,21 +1,64 @@
+"use client";
+
 import Link from "next/link";
-import { connectDB } from "@/lib/mongodb";
-import Event from "@/models/Event";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/authContext";
 
-// ✅ Server-side data fetching (runs on Vercel server)
-async function getEvents() {
-  await connectDB();
-
-  const events = await Event.find({})
-    .sort({ date: 1 })
-    .lean();
-
-  // convert Mongo documents → plain JSON
-  return JSON.parse(JSON.stringify(events));
+interface Event {
+  _id: string;
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  participants: string[];
 }
 
-export default async function Home() {
-  const events = await getEvents();
+export default function Home() {
+  const router = useRouter();
+  const { user, loading, logout } = useAuth();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth/login");
+    }
+  }, [user, loading, router]);
+
+  // Fetch events when authenticated
+  useEffect(() => {
+    if (user) {
+      fetchEvents();
+    }
+  }, [user]);
+
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch("/api/events");
+      if (res.ok) {
+        const data = await res.json();
+        setEvents(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch events:", error);
+    } finally {
+      setEventsLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -30,19 +73,34 @@ export default async function Home() {
               </p>
             </div>
 
-            <Link
-              href="/create"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
-            >
-              + Create Event
-            </Link>
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-700 px-3 py-2">
+                👤 {user.name}
+              </div>
+              <Link
+                href="/create"
+                className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
+              >
+                + Create Event
+              </Link>
+              <button
+                onClick={logout}
+                className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-3 rounded-lg transition duration-200"
+              >
+                Log Out
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Events Section */}
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {events && events.length > 0 ? (
+        {eventsLoading ? (
+          <div className="text-center py-16">
+            <p className="text-gray-600">Loading events...</p>
+          </div>
+        ) : events && events.length > 0 ? (
           <>
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-gray-800">
@@ -54,7 +112,7 @@ export default async function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {events.map((event: any) => (
+              {events.map((event) => (
                 <Link
                   key={event._id}
                   href={`/event/${event._id}`}
@@ -122,12 +180,11 @@ export default async function Home() {
             <p className="text-gray-600 mb-6">
               Be the first to create an event!
             </p>
-
             <Link
               href="/create"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-8 py-3 rounded-lg transition duration-200 inline-block"
             >
-              Create First Event
+              Create Event
             </Link>
           </div>
         )}

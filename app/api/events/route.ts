@@ -6,11 +6,11 @@ export async function GET() {
   try {
     await connectDB();
 
-    const events = await Event.find({
-      date: { $gt: new Date() },
-    }).sort({ date: 1 });
+    const events = await Event.find({})
+      .sort({ date: 1 })
+      .lean();
 
-    return NextResponse.json({ events });
+    return NextResponse.json(JSON.parse(JSON.stringify(events)));
   } catch (error) {
     return NextResponse.json(
       { message: "Failed to fetch events" },
