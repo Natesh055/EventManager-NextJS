@@ -83,6 +83,12 @@ export default function Home() {
               >
                 + Create Event
               </Link>
+              <Link
+                href="/chatbot"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
+              >
+                Create Event using Chatbot
+              </Link>
               <button
                 onClick={logout}
                 className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-3 rounded-lg transition duration-200"
