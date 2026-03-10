@@ -23,7 +23,6 @@ export async function sendToMCP(
     const systemPrompt = `You are a helpful assistant that helps users create events. When users send messages about creating events, extract the following information if available:
 - name: The event name
 - date: The event date (in YYYY-MM-DD format)
-- time: The event time (in HH:MM format)
 - location: The event location
 - description: A description of the event
 

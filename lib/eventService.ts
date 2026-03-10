@@ -4,7 +4,6 @@ import Event from "@/models/Event";
 export interface DraftEvent {
   name: string;
   date: string;
-  time: string;
   location: string;
   description: string;
 }
@@ -12,7 +11,7 @@ export interface DraftEvent {
 export async function createEvent(draft: DraftEvent) {
   await connectDB();
   // combine date & time into one Date object
-  const fullDate = new Date(`${draft.date} ${draft.time}`);
+  const fullDate = new Date(`${draft.date}`);
   if (isNaN(fullDate.getTime())) {
     throw new Error("Invalid date/time");
   }

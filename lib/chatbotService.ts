@@ -13,7 +13,6 @@ const contexts = new Map<string, ChatContext>();
 const REQUIRED_FIELDS: (keyof DraftEvent)[] = [
   "name",
   "date",
-  "time",
   "location",
   "description",
 ];
@@ -58,7 +57,6 @@ export async function handleChat(
       const summary = `Here’s what I have:\n` +
         `• Name: ${ctx.draft.name}\n` +
         `• Date: ${ctx.draft.date}\n` +
-        `• Time: ${ctx.draft.time}\n` +
         `• Location: ${ctx.draft.location}\n` +
         `• Description: ${ctx.draft.description}\n\n` +
         `Is that correct? (yes / no)`;
@@ -68,7 +66,6 @@ export async function handleChat(
     const questions: Record<keyof DraftEvent, string> = {
       name: "What is the event name?",
       date: "On what date is the event?",
-      time: "What time will it start?",
       location: "Where will it take place?",
       description: "Please provide a short description.",
     };
