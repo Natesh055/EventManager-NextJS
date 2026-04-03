@@ -48,33 +48,33 @@ export default function SignupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+      <div className="loading-state">
+        <div className="loading-card">Loading signup...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Sign Up</h1>
-        <p className="text-gray-500 mb-6">Create an account to get started</p>
+    <div className="auth-layout">
+      <div className="auth-card">
+        <span className="eyebrow">Create Account</span>
+        <h1 className="section-heading mt-4 text-3xl">Sign Up</h1>
+        <p className="section-copy">
+          Set up your profile and start hosting or joining standout events.
+        </p>
 
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
+        <div className="mt-8 space-y-4">
+          {error && <div className="alert-error">{error}</div>}
+          {success && (
+            <div className="alert-success">
+              Account created successfully. Redirecting...
+            </div>
+          )}
+        </div>
 
-        {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            Account created successfully! Redirecting...
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label">
               Full Name<span className="text-red-500">*</span>
             </label>
             <input
@@ -83,13 +83,13 @@ export default function SignupPage() {
               disabled={isLoading}
               value={form.name}
               onChange={(e) => handleChange("name", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="input"
               placeholder="John Doe"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label">
               Email<span className="text-red-500">*</span>
             </label>
             <input
@@ -98,13 +98,13 @@ export default function SignupPage() {
               disabled={isLoading}
               value={form.email}
               onChange={(e) => handleChange("email", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="input"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label">
               Password<span className="text-red-500">*</span>
             </label>
             <input
@@ -113,13 +113,13 @@ export default function SignupPage() {
               disabled={isLoading}
               value={form.password}
               onChange={(e) => handleChange("password", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="input"
               placeholder="At least 6 characters"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="label">
               Confirm Password<span className="text-red-500">*</span>
             </label>
             <input
@@ -128,7 +128,7 @@ export default function SignupPage() {
               disabled={isLoading}
               value={form.confirmPassword}
               onChange={(e) => handleChange("confirmPassword", e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="input"
               placeholder="Confirm your password"
             />
           </div>
@@ -136,15 +136,15 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium py-2.5 rounded-lg transition duration-200"
+            className="button-primary flex w-full"
           >
             {isLoading ? "Creating Account..." : "Sign Up"}
           </button>
         </form>
 
-        <p className="text-center text-gray-600 text-sm mt-6">
+        <p className="mt-6 text-center text-sm text-slate-600">
           Already have an account?{" "}
-          <Link href="/auth/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+          <Link href="/auth/login" className="button-link">
             Log In
           </Link>
         </p>

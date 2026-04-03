@@ -11,7 +11,7 @@ export async function GET() {
       .lean();
 
     return NextResponse.json(JSON.parse(JSON.stringify(events)));
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { message: "Failed to fetch events" },
       { status: 500 }
@@ -24,7 +24,12 @@ export async function POST(req: Request) {
     await connectDB();
     const body = await req.json();
 
-    const { title, description, date, location } = body;
+    const title = typeof body?.title === "string" ? body.title.trim() : "";
+    const description =
+      typeof body?.description === "string" ? body.description.trim() : "";
+    const location =
+      typeof body?.location === "string" ? body.location.trim() : "";
+    const date = typeof body?.date === "string" ? body.date.trim() : "";
 
     if (!title || !description || !date || !location) {
       return NextResponse.json(
@@ -33,7 +38,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (new Date(date) <= new Date()) {
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json(
+        { message: "Date is invalid" },
+        { status: 400 }
+      );
+    }
+
+    if (parsedDate <= new Date()) {
       return NextResponse.json(
         { message: "Date must be in the future" },
         { status: 400 }
@@ -43,12 +56,12 @@ export async function POST(req: Request) {
     const newEvent = await Event.create({
       title,
       description,
-      date,
+      date: parsedDate,
       location,
     });
 
     return NextResponse.json(newEvent, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { message: "Failed to create event" },
       { status: 500 }

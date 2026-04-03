@@ -50,8 +50,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+      <div className="loading-state">
+        <div className="loading-card">Loading your event dashboard...</div>
       </div>
     );
   }
@@ -61,87 +61,76 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header Section */}
-      <div className="bg-white shadow-md">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-800">EventHub</h1>
-              <p className="text-gray-600 mt-2">
-                Discover and create amazing events
+    <div className="page-shell">
+      <div className="page-container space-y-8">
+        <section className="hero-panel">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <span className="eyebrow">Community Events</span>
+              <h1 className="section-heading mt-4">EventHub</h1>
+              <p className="section-copy">
+                Discover memorable gatherings, launch your own experiences, and
+                keep your crew in the loop from one polished dashboard.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-gray-700 px-3 py-2">
-                👤 {user.name}
+            <div className="flex flex-col items-start gap-3 lg:items-end">
+              <div className="info-pill">Host signed in: {user.name}</div>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/create" className="button-secondary">
+                  Create Event
+                </Link>
+                <button onClick={logout} className="button-danger">
+                  Log Out
+                </button>
               </div>
-              <Link
-                href="/create"
-                className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
-              >
-                + Create Event
-              </Link>
-              <Link
-                href="/chatbot"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition duration-200 shadow-md hover:shadow-lg"
-              >
-                Create Event using Chatbot
-              </Link>
-              <button
-                onClick={logout}
-                className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-3 rounded-lg transition duration-200"
-              >
-                Log Out
-              </button>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Events Section */}
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        {eventsLoading ? (
-          <div className="text-center py-16">
-            <p className="text-gray-600">Loading events...</p>
-          </div>
-        ) : events && events.length > 0 ? (
-          <>
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Upcoming Events ({events.length})
+        <section className="space-y-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span className="eyebrow">Live Feed</span>
+              <h2 className="section-heading mt-3 text-2xl sm:text-3xl">
+                Upcoming Events {events.length > 0 ? `(${events.length})` : ""}
               </h2>
-              <p className="text-gray-600 mt-2">
-                Explore and join upcoming events
+              <p className="section-copy mt-1">
+                Browse what&apos;s coming up and jump into the plans that match
+                your energy.
               </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {eventsLoading ? (
+            <div className="loading-card">Loading events...</div>
+          ) : events && events.length > 0 ? (
+            <div className="event-grid">
               {events.map((event) => (
                 <Link
                   key={event._id}
                   href={`/event/${event._id}`}
                   className="group"
                 >
-                  <div className="h-full bg-white rounded-lg shadow-md hover:shadow-xl transition duration-300 overflow-hidden hover:scale-105 transform">
-                    {/* Event Header */}
-                    <div className="bg-gradient-to-r from-indigo-500 to-blue-500 h-32 flex items-end p-4">
-                      <h3 className="text-2xl font-bold text-white group-hover:text-indigo-100 transition">
-                        {event.title}
-                      </h3>
+                  <article className="event-card">
+                    <div className="event-card-banner">
+                      <div className="space-y-3">
+                        <span className="meta-chip">
+                          {event.participants?.length || 0} attendees
+                        </span>
+                        <h3 className="event-card-title">{event.title}</h3>
+                      </div>
                     </div>
 
-                    {/* Event Content */}
-                    <div className="p-6">
-                      <p className="text-gray-600 mb-4 line-clamp-2">
+                    <div className="event-card-body">
+                      <p className="muted-copy line-clamp-3">
                         {event.description}
                       </p>
 
-                      <div className="space-y-3 mb-4 border-b border-gray-200 pb-4">
-                        <div className="flex items-center text-gray-700">
-                          <span className="text-lg mr-3">📅</span>
-                          <span className="font-medium">
+                      <div className="detail-list">
+                        <div className="detail-row">
+                          <span className="detail-icon">📅</span>
+                          <span>
                             {new Date(event.date).toLocaleDateString("en-US", {
                               month: "long",
                               day: "numeric",
@@ -149,51 +138,48 @@ export default function Home() {
                             })}
                           </span>
                         </div>
-
-                        <div className="flex items-center text-gray-700">
-                          <span className="text-lg mr-3">📍</span>
-                          <span className="font-medium">
-                            {event.location}
-                          </span>
+                        <div className="detail-row">
+                          <span className="detail-icon">📍</span>
+                          <span>{event.location}</span>
                         </div>
                       </div>
 
-                      {/* Participants */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-600">👥</span>
-                          <span className="text-sm font-medium text-gray-700 ml-1">
-                            {event.participants?.length || 0} Participants
-                          </span>
-                        </div>
-
-                        <span className="text-indigo-600 font-medium group-hover:text-indigo-700 transition">
-                          View →
+                      <div className="mt-auto flex items-center justify-between pt-2">
+                        <span className="text-sm font-semibold text-slate-500">
+                          View details
                         </span>
+                        <span className="button-link">Open event</span>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 </Link>
               ))}
             </div>
-          </>
-        ) : (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">📭</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              No Events Yet
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Be the first to create an event!
-            </p>
-            <Link
-              href="/create"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-8 py-3 rounded-lg transition duration-200 inline-block"
-            >
-              Create Event
-            </Link>
-          </div>
-        )}
+          ) : (
+            <div className="empty-state">
+              <div className="text-5xl">📭</div>
+              <h3 className="mt-5 text-3xl font-semibold text-slate-900">
+                No events yet
+              </h3>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
+                Start the calendar with a standout meetup, workshop, or casual
+                hangout.
+              </p>
+              <div className="mt-7">
+                <Link href="/create" className="button-primary">
+                  Create the first event
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <Link
+          href="/chatbot"
+          className="button-primary fixed bottom-6 right-6 z-20 shadow-2xl sm:bottom-8 sm:right-8"
+        >
+          Plan with Chatbot
+        </Link>
       </div>
     </div>
   );

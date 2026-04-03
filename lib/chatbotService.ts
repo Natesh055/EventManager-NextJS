@@ -1,11 +1,38 @@
 import { v4 as uuidv4 } from "uuid";
-import { sendToMCP } from "./mcpClient";
+import {
+  ChatIntent,
+  ChatMessagePayload,
+  ExtractedEventFields,
+  sendToMCP,
+} from "./mcpClient";
 import { createEvent, DraftEvent } from "./eventService";
+
+export interface ChatContextSnapshot {
+  conversationId?: string;
+  draft?: Partial<DraftEvent>;
+  stage?: ChatStage;
+  history?: ChatMessagePayload[];
+}
+
+export interface HandleChatRequest extends ChatContextSnapshot {
+  message: string;
+}
+
+export interface HandleChatResponse {
+  conversationId: string;
+  reply: string;
+  draft: Partial<DraftEvent>;
+  stage: ChatStage;
+  history: ChatMessagePayload[];
+}
+
+type ChatStage = "collecting" | "confirmation" | "done";
 
 interface ChatContext {
   id: string;
   draft: Partial<DraftEvent>;
-  stage: "collecting" | "confirmation" | "done";
+  stage: ChatStage;
+  history: ChatMessagePayload[];
 }
 
 const contexts = new Map<string, ChatContext>();
@@ -17,93 +44,245 @@ const REQUIRED_FIELDS: (keyof DraftEvent)[] = [
   "description",
 ];
 
+const QUESTIONS: Record<keyof DraftEvent, string> = {
+  name: "What should I call the event?",
+  date: "What date should I use? Please send it in YYYY-MM-DD format, and make sure it is in the future.",
+  location: "Where will the event take place?",
+  description: "What short description should appear on the event page?",
+};
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isValidFutureDate(value: string): boolean {
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed > new Date();
+}
+
+function hasValidFieldValue(
+  field: keyof DraftEvent,
+  value: DraftEvent[keyof DraftEvent] | undefined
+): boolean {
+  if (!isNonEmptyString(value)) return false;
+  return field !== "date" || isValidFutureDate(value);
+}
+
 function firstMissing(ctx: ChatContext): keyof DraftEvent | null {
-  return (
-    REQUIRED_FIELDS.find((f) => !ctx.draft[f]) ?? null
-  );
+  return REQUIRED_FIELDS.find((field) => !hasValidFieldValue(field, ctx.draft[field])) ?? null;
+}
+
+function applyExtractedDraftValues(
+  draft: Partial<DraftEvent>,
+  extracted?: ExtractedEventFields
+) {
+  if (!extracted) return;
+
+  if (isNonEmptyString(extracted.name)) draft.name = extracted.name.trim();
+  if (isNonEmptyString(extracted.date)) draft.date = extracted.date.trim();
+  if (isNonEmptyString(extracted.location)) {
+    draft.location = extracted.location.trim();
+  }
+  if (isNonEmptyString(extracted.description)) {
+    draft.description = extracted.description.trim();
+  }
+}
+
+function trimHistory(history: ChatMessagePayload[]): ChatMessagePayload[] {
+  return history.slice(-20);
+}
+
+function appendUserMessage(
+  history: ChatMessagePayload[],
+  message: string
+): ChatMessagePayload[] {
+  const lastEntry = history[history.length - 1];
+  if (lastEntry?.role === "user" && lastEntry.content === message) {
+    return trimHistory(history);
+  }
+
+  return trimHistory([...history, { role: "user", content: message }]);
+}
+
+function buildDraftSummary(draft: Partial<DraftEvent>): string {
+  return [
+    "Here is the event draft I have:",
+    `- Name: ${draft.name ?? "Not set"}`,
+    `- Date: ${draft.date ?? "Not set"}`,
+    `- Location: ${draft.location ?? "Not set"}`,
+    `- Description: ${draft.description ?? "Not set"}`,
+  ].join("\n");
+}
+
+function buildCollectingReply(
+  ctx: ChatContext,
+  intent: ChatIntent,
+  modelReply: string
+): string {
+  const missing = firstMissing(ctx);
+  if (!missing) {
+    return `${buildDraftSummary(ctx.draft)}\n\nIs everything correct? Reply with yes to create it, or send the detail you want to change.`;
+  }
+
+  if (intent === "revise") {
+    return `${buildDraftSummary(ctx.draft)}\n\nUpdated. ${QUESTIONS[missing]}`;
+  }
+
+  if (
+    modelReply &&
+    !/^(what|where|when|please provide|please share)/i.test(modelReply.trim())
+  ) {
+    return `${modelReply}\n\n${QUESTIONS[missing]}`;
+  }
+
+  return QUESTIONS[missing];
+}
+
+function createFreshContext(conversationId?: string): ChatContext {
+  const id = conversationId || uuidv4();
+  return {
+    id,
+    draft: {},
+    stage: "collecting",
+    history: [],
+  };
+}
+
+function hydrateContext(request: ChatContextSnapshot): ChatContext {
+  const conversationId = request.conversationId;
+  const cached = conversationId ? contexts.get(conversationId) : undefined;
+  const ctx = cached
+    ? {
+        ...cached,
+        draft: { ...cached.draft },
+        history: [...cached.history],
+      }
+    : createFreshContext(conversationId);
+
+  if (request.draft) {
+    ctx.draft = { ...ctx.draft, ...request.draft };
+  }
+
+  if (request.stage) {
+    ctx.stage = request.stage;
+  }
+
+  if (request.history?.length) {
+    ctx.history = trimHistory(
+      request.history.filter(
+        (entry) =>
+          (entry.role === "user" || entry.role === "assistant") &&
+          isNonEmptyString(entry.content)
+      )
+    );
+  }
+
+  contexts.set(ctx.id, ctx);
+  return ctx;
 }
 
 export async function handleChat(
-  message: string,
-  conversationId?: string
-): Promise<{ conversationId: string; reply: string }> {
-  let ctx: ChatContext;
+  request: HandleChatRequest
+): Promise<HandleChatResponse> {
+  const ctx = hydrateContext(request);
+  const userMessage = request.message.trim();
 
-  if (!conversationId || !contexts.has(conversationId)) {
-    const id = uuidv4();
-    ctx = { id, draft: {}, stage: "collecting" };
-    contexts.set(id, ctx);
-  } else {
-    ctx = contexts.get(conversationId)!;
+  if (!userMessage) {
+    return {
+      conversationId: ctx.id,
+      reply: "Send me a few details about the event you want to create.",
+      draft: ctx.draft,
+      stage: ctx.stage,
+      history: ctx.history,
+    };
   }
 
-  // ask MCP server to parse the incoming text
-  const mcpResp = await sendToMCP(message, {
+  ctx.history = appendUserMessage(ctx.history, userMessage);
+
+  const mcpResp = await sendToMCP(userMessage, {
     draft: ctx.draft,
     stage: ctx.stage,
+    history: ctx.history,
   });
 
-  // merge any extracted values
-  if (mcpResp.extracted) {
-    Object.assign(ctx.draft, mcpResp.extracted);
+  if (mcpResp.intent === "restart") {
+    ctx.draft = {};
+    ctx.stage = "collecting";
+    const reply = "Starting fresh. What should I call the event?";
+    ctx.history = trimHistory([...ctx.history, { role: "assistant", content: reply }]);
+    contexts.set(ctx.id, ctx);
+    return {
+      conversationId: ctx.id,
+      reply,
+      draft: ctx.draft,
+      stage: ctx.stage,
+      history: ctx.history,
+    };
   }
 
-  // advance conversation
+  applyExtractedDraftValues(ctx.draft, mcpResp.extracted);
+
+  let reply: string;
+
   if (ctx.stage === "collecting") {
     const missing = firstMissing(ctx);
     if (!missing) {
-      // all fields are present, ask for confirmation
       ctx.stage = "confirmation";
-      const summary = `Here’s what I have:\n` +
-        `• Name: ${ctx.draft.name}\n` +
-        `• Date: ${ctx.draft.date}\n` +
-        `• Location: ${ctx.draft.location}\n` +
-        `• Description: ${ctx.draft.description}\n\n` +
-        `Is that correct? (yes / no)`;
-      return { conversationId: ctx.id, reply: summary };
+      reply = `${buildDraftSummary(
+        ctx.draft
+      )}\n\nIs everything correct? Reply with yes to create it, or send the detail you want to change.`;
+    } else {
+      reply = buildCollectingReply(ctx, mcpResp.intent, mcpResp.reply);
     }
-
-    const questions: Record<keyof DraftEvent, string> = {
-      name: "What is the event name?",
-      date: "On what date is the event?",
-      location: "Where will it take place?",
-      description: "Please provide a short description.",
-    };
-
-    // if MCP suggested a reply, use it; otherwise ask the next missing question
-    return {
-      conversationId: ctx.id,
-      reply: mcpResp.reply || questions[missing],
-    };
   } else if (ctx.stage === "confirmation") {
-    if (/^(y|yes|correct|sure)/i.test(message)) {
-      try {
-        await createEvent(ctx.draft as DraftEvent);
-        ctx.stage = "done";
-        return {
-          conversationId: ctx.id,
-          reply: "✅ Your event has been created!",
-        };
-      } catch (err) {
-        return {
-          conversationId: ctx.id,
-          reply: "Oops, I couldn’t create the event. Please try again later.",
-        };
+    const missing = firstMissing(ctx);
+
+    if (mcpResp.intent === "confirm") {
+      if (missing) {
+        ctx.stage = "collecting";
+        reply = `I still need one more detail before I can create it. ${QUESTIONS[missing]}`;
+      } else {
+        try {
+          await createEvent(ctx.draft as DraftEvent);
+          ctx.stage = "done";
+          reply =
+            "Your event has been created successfully. If you want, I can help you draft another one.";
+        } catch (error) {
+          console.error("create event from chatbot failed", error);
+          reply =
+            "I couldn't create the event just yet. Please review the details and try again.";
+        }
       }
     } else {
-      // user said no – reset or allow edits
-      ctx.draft = {};
-      ctx.stage = "collecting";
-      return {
-        conversationId: ctx.id,
-        reply: "Okay, let’s start over. What’s the event name?",
-      };
+      if (missing) {
+        ctx.stage = "collecting";
+        reply = `I updated the draft. ${QUESTIONS[missing]}`;
+      } else {
+        reply = `${buildDraftSummary(
+          ctx.draft
+        )}\n\nI updated the draft. Reply with yes when you want me to create it, or tell me what to change next.`;
+      }
+    }
+  } else {
+    if (mcpResp.intent === "provide_details" || mcpResp.intent === "revise") {
+      ctx.stage = "confirmation";
+      reply = `${buildDraftSummary(
+        ctx.draft
+      )}\n\nThis is your latest draft. Reply with yes to create it, or send any change you want.`;
+    } else {
+      reply =
+        "Your last event draft is complete. Tell me if you want to start a new one or change the existing details.";
     }
   }
 
-  // fallback
+  ctx.history = trimHistory([...ctx.history, { role: "assistant", content: reply }]);
+  contexts.set(ctx.id, ctx);
+
   return {
     conversationId: ctx.id,
-    reply: mcpResp.reply || "Tell me more about the event.",
+    reply,
+    draft: ctx.draft,
+    stage: ctx.stage,
+    history: ctx.history,
   };
 }

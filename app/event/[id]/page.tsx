@@ -47,7 +47,7 @@ export default function EventPage() {
 
         const data = await res.json();
         setEvent(data);
-      } catch (err) {
+      } catch {
         setError("Failed to fetch event");
       } finally {
         setLoading(false);
@@ -101,8 +101,8 @@ export default function EventPage() {
   // Loading state
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Loading...</div>
+      <div className="loading-state">
+        <div className="loading-card">Loading event details...</div>
       </div>
     );
   }
@@ -112,21 +112,17 @@ export default function EventPage() {
   // Error state
   if (error || !event) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Event Not Found
-          </h2>
-          <p className="text-gray-600 mb-6">
-            The event you're looking for doesn't exist.
+      <div className="page-shell flex items-center justify-center">
+        <div className="empty-state">
+          <h2 className="text-3xl font-semibold text-slate-900">Event Not Found</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
+            The event you&apos;re looking for doesn&apos;t exist or may have been removed.
           </p>
-
-          <Link
-            href="/"
-            className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition"
-          >
-            Back to Events
-          </Link>
+          <div className="mt-7">
+            <Link href="/" className="button-primary">
+              Back to Events
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -134,82 +130,90 @@ export default function EventPage() {
 
   // Main UI
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/"
-          className="inline-block mb-6 text-indigo-600 hover:text-indigo-700 font-medium"
-        >
-          ← Back to Events
+    <div className="page-shell">
+      <div className="page-container max-w-4xl">
+        <Link href="/" className="back-link mb-6">
+          <span>←</span>
+          <span>Back to Events</span>
         </Link>
 
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-500 to-blue-500 p-8">
-            <h1 className="text-4xl font-bold text-white mb-2">
-              {event.title}
-            </h1>
+        <article className="panel-strong overflow-hidden">
+          <div className="event-card-banner min-h-56 p-8 sm:p-10">
+            <div className="space-y-4">
+              <span className="meta-chip">
+                {event.participants?.length || 0} participants
+              </span>
+              <h1 className="section-heading max-w-2xl text-white">
+                {event.title}
+              </h1>
+            </div>
           </div>
 
-          {/* Details */}
-          <div className="p-8">
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Description
-              </h2>
-              <p className="text-gray-700 leading-relaxed">
+          <div className="space-y-8 p-6 sm:p-8">
+            <section>
+              <span className="eyebrow">Overview</span>
+              <p className="mt-4 text-base leading-7 text-slate-700">
                 {event.description}
               </p>
-            </div>
+            </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 pb-8 border-b">
-              <div className="flex items-center">
-                <span className="text-2xl mr-3">📅</span>
-                <div>
-                  <p className="text-sm text-gray-600">Date</p>
-                  <p className="text-lg font-semibold text-gray-800">
-                    {new Date(event.date).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
+            <section className="stats-grid">
+              <div className="stat-card">
+                <div className="detail-row">
+                  <span className="detail-icon">📅</span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Date
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {new Date(event.date).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center">
-                <span className="text-2xl mr-3">📍</span>
-                <div>
-                  <p className="text-sm text-gray-600">Location</p>
-                  <p className="text-lg font-semibold text-gray-800">
-                    {event.location}
-                  </p>
+              <div className="stat-card sm:col-span-2">
+                <div className="detail-row">
+                  <span className="detail-icon">📍</span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Location
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-slate-900">
+                      {event.location}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Participants ({event.participants?.length || 0})
-              </h2>
-
-              <div className="bg-indigo-50 rounded-lg p-4">
-                <p className="text-indigo-800">
-                  {event.participants?.length || 0} people have joined this
-                  event
+            <section className="panel rounded-[28px] p-5 sm:p-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <span className="eyebrow">Attendance</span>
+                  <h2 className="mt-3 text-2xl font-semibold text-slate-900">
+                    {event.participants?.length || 0} people joined
+                  </h2>
+                </div>
+                <p className="text-sm leading-6 text-slate-600">
+                  Invite more guests or join now to save your spot.
                 </p>
               </div>
-            </div>
+            </section>
 
             <button
               onClick={handleJoinEvent}
               disabled={joining}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-3 rounded-lg transition duration-200"
+              className="button-primary flex w-full disabled:cursor-not-allowed disabled:opacity-60"
             >
               {joining ? "Joining..." : "Join Event"}
             </button>
           </div>
-        </div>
+        </article>
       </div>
     </div>
   );
