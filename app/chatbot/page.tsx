@@ -26,6 +26,10 @@ type ChatResponse = {
   history: Message[];
 };
 
+type ErrorResponse = {
+  message?: string;
+};
+
 const INITIAL_ASSISTANT_MESSAGE =
   "Tell me about the event you want to create. You can give me everything at once, or we can build it step by step.";
 
@@ -143,15 +147,26 @@ export default function ChatbotPage() {
         }),
       });
 
-      const data = (await res.json()) as ChatResponse | { message?: string };
+      const data = (await res.json()) as ChatResponse | ErrorResponse;
+
       if (!res.ok || !("conversationId" in data)) {
-        throw new Error(data.message || "Chatbot request failed");
+        const errorMessage =
+          "message" in data && data.message
+            ? data.message
+            : "Chatbot request failed";
+
+        throw new Error(errorMessage);
       }
 
+      // Now TypeScript knows this is ChatResponse
       setConversationId(data.conversationId);
       setDraft(data.draft ?? {});
       setStage(data.stage);
-      setMessages(data.history?.length ? data.history : [...nextMessages, { role: "assistant", content: data.reply }]);
+      setMessages(
+        data.history?.length
+          ? data.history
+          : [...nextMessages, { role: "assistant", content: data.reply }]
+      );
     } catch (error) {
       const fallback =
         error instanceof Error
@@ -215,7 +230,11 @@ export default function ChatbotPage() {
               {messages.map((msg, index) => (
                 <div
                   key={`${msg.role}-${index}-${msg.content.slice(0, 24)}`}
-                  className={msg.role === "assistant" ? "chat-row-bot" : "chat-row-user"}
+                  className={
+                    msg.role === "assistant"
+                      ? "chat-row-bot"
+                      : "chat-row-user"
+                  }
                 >
                   <div
                     className={
